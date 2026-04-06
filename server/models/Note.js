@@ -27,11 +27,19 @@ const noteSchema = new mongoose.Schema({
         ref: 'User',
         required: true,
         index: true
+    },
+    workspaceId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Workspace',
+        default: null,
+        index: true
     }
 }, {
     timestamps: true
 });
 
+noteSchema.index({ userId: 1, workspaceId: 1 });
+noteSchema.index({ workspaceId: 1, updatedAt: -1 });
 noteSchema.index({ userId: 1, isPinned: -1, updatedAt: -1 });
 
 module.exports = mongoose.model('Note', noteSchema);

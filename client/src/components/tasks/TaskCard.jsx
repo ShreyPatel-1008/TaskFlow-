@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Edit2, Trash2, Play, Square, Clock, Calendar as CalIcon, Tag, RefreshCw } from 'lucide-react';
 import { useTask } from '../../context/TaskContext';
 import { formatDate, getStatusLabel, getStatusClass, getPriorityClass, formatTime, isOverdue } from '../../utils/helpers';
+import PermissionGate from '../PermissionGate';
 
 const TaskCard = ({ task, index, onEdit, onDelete }) => {
     const { updateTaskStatus } = useTask();
@@ -112,13 +113,17 @@ const TaskCard = ({ task, index, onEdit, onDelete }) => {
             </div>
 
             <div className="notion-col-actions">
-                <button className="btn btn-ghost btn-icon btn-sm" onClick={() => onEdit(task)}>
-                    <Edit2 size={14} />
-                </button>
-                <button className="btn btn-ghost btn-icon btn-sm" onClick={() => onDelete(task._id)}
-                    style={{ color: 'var(--color-danger)' }}>
-                    <Trash2 size={14} />
-                </button>
+                <PermissionGate action="editTask">
+                    <button className="btn btn-ghost btn-icon btn-sm" onClick={() => onEdit(task)}>
+                        <Edit2 size={14} />
+                    </button>
+                </PermissionGate>
+                <PermissionGate action="deleteTask">
+                    <button className="btn btn-ghost btn-icon btn-sm" onClick={() => onDelete(task._id)}
+                        style={{ color: 'var(--color-danger)' }}>
+                        <Trash2 size={14} />
+                    </button>
+                </PermissionGate>
             </div>
         </div>
     );

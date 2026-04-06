@@ -4,7 +4,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     LineChart, Line, PieChart, Pie, Cell, Legend, AreaChart, Area
 } from 'recharts';
-import { TrendingUp, Calendar, Target, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { TrendingUp, Calendar, Target, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const STATUS_COLORS = { COMPLETED: '#00b894', IN_PROGRESS: '#fdcb6e', NOT_STARTED: '#ff6b6b' };
 const STATUS_LABELS = { COMPLETED: 'Completed', IN_PROGRESS: 'In Progress', NOT_STARTED: 'Not Started' };
@@ -29,7 +29,6 @@ const Analytics = () => {
     const [weekly, setWeekly] = useState(null);
     const [monthly, setMonthly] = useState(null);
     const [heatmap, setHeatmap] = useState(null);
-    const [focusHours, setFocusHours] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selMonth, setSelMonth] = useState(new Date().getMonth());
     const [selYear, setSelYear] = useState(new Date().getFullYear());
@@ -37,13 +36,12 @@ const Analytics = () => {
     useEffect(() => {
         const fetchAll = async () => {
             try {
-                const [w, m, h, f] = await Promise.all([
+                const [w, m, h] = await Promise.all([
                     API.get('/analytics/weekly'),
                     API.get('/analytics/monthly', { params: { month: selMonth, year: selYear } }),
-                    API.get('/analytics/heatmap'),
-                    API.get('/analytics/focus-hours')
+                    API.get('/analytics/heatmap')
                 ]);
-                setWeekly(w.data); setMonthly(m.data); setHeatmap(h.data); setFocusHours(f.data);
+                setWeekly(w.data); setMonthly(m.data); setHeatmap(h.data);
             } catch (err) { console.error(err); }
             finally { setLoading(false); }
         };
@@ -95,7 +93,7 @@ const Analytics = () => {
             <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
                 <div className="stat-card purple"><div className="stat-card-header"><span className="stat-card-label">Weekly Score</span><Target size={18} style={{ color: 'var(--accent-primary-light)' }} /></div><div className="stat-card-value">{weekly?.productivityScore || 0}%</div></div>
                 <div className="stat-card green"><div className="stat-card-header"><span className="stat-card-label">Week Completed</span><TrendingUp size={18} style={{ color: 'var(--color-success)' }} /></div><div className="stat-card-value">{weekly?.weekCompleted || 0}</div></div>
-                <div className="stat-card blue"><div className="stat-card-header"><span className="stat-card-label">Focus Hours</span><Clock size={18} style={{ color: 'var(--color-info)' }} /></div><div className="stat-card-value">{weekly?.focusHours || 0}h</div></div>
+                <div className="stat-card blue"><div className="stat-card-header"><span className="stat-card-label">Week Total</span><Target size={18} style={{ color: 'var(--color-info)' }} /></div><div className="stat-card-value">{weekly?.weekTotal || 0}</div></div>
                 <div className="stat-card orange"><div className="stat-card-header"><span className="stat-card-label">Monthly Score</span><Calendar size={18} style={{ color: 'var(--color-warning)' }} /></div><div className="stat-card-value">{monthly?.productivityScore || 0}%</div></div>
             </div>
 
@@ -116,15 +114,7 @@ const Analytics = () => {
                 </div>
             </div>
 
-            {focusHours && (
-                <div className="chart-card" style={{ marginBottom: '2rem' }}>
-                    <div className="chart-card-header">
-                        <h3 className="chart-card-title">⏱️ Weekly Focus Hours</h3>
-                        <span className="badge badge-info">Time spent in focused work</span>
-                    </div>
-                    <ResponsiveContainer width="100%" height={260}><AreaChart data={focusHours.dailyFocus || []}><defs><linearGradient id="fg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#00cec9" stopOpacity={0.3} /><stop offset="95%" stopColor="#00cec9" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" /><XAxis dataKey="day" stroke="var(--text-muted)" fontSize={12} /><YAxis stroke="var(--text-muted)" fontSize={12} /><Tooltip content={<ChartTooltip />} /><Area type="monotone" dataKey="hours" stroke="#00cec9" fill="url(#fg)" strokeWidth={2} name="Hours" /></AreaChart></ResponsiveContainer>
-                </div>
-            )}
+
 
             {/* Monthly section */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: 'var(--space-8)', marginBottom: '1.25rem' }}>
@@ -153,7 +143,7 @@ const Analytics = () => {
             </div>
 
             <div className="chart-card" style={{ marginTop: '1.5rem' }}>
-                <div className="chart-card-header"><h3 className="chart-card-title">🟩 Contribution Heatmap</h3><span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Last 12 months</span></div>
+                <div className="chart-card-header"><h3 className="chart-card-title">✅ Task Completion Heatmap</h3><span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tasks completed · Last 12 months</span></div>
                 <div className="heatmap-container"><div className="heatmap-grid">
                     {hWeeks.map((w, wi) => <div key={wi} className="heatmap-column">{w.map((d, di) => <div key={di} className={`heatmap-cell level-${d.level}`} title={`${d.date}: ${d.count} tasks`} />)}</div>)}
                 </div>

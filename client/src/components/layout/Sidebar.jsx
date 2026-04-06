@@ -6,6 +6,9 @@ import {
     BarChart3,
     Calendar,
     StickyNote,
+    Users,
+    Settings2,
+    Repeat,
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen }) => {
@@ -17,6 +20,12 @@ const Sidebar = ({ isOpen }) => {
         { path: '/notes', icon: <StickyNote />, label: 'Notes' },
         { path: '/analytics', icon: <BarChart3 />, label: 'Analytics' },
         { path: '/calendar', icon: <Calendar />, label: 'Calendar' },
+        { path: '/members', icon: <Users />, label: 'Team' },
+    ];
+
+    const settingsItems = [
+        { path: '/settings/custom-fields', icon: <Settings2 />, label: 'Custom Fields' },
+        { path: '/settings/recurring-tasks', icon: <Repeat />, label: 'Recurring Tasks' },
     ];
 
     return (
@@ -36,6 +45,20 @@ const Sidebar = ({ isOpen }) => {
                             `sidebar-link ${isActive ? 'active' : ''}`
                         }
                         end={item.path === '/'}
+                    >
+                        {item.icon}
+                        <span>{item.label}</span>
+                    </NavLink>
+                ))}
+
+                <span className="sidebar-section-title" style={{ marginTop: '16px' }}>Settings</span>
+                {settingsItems.map((item) => (
+                    <NavLink
+                        key={item.path}
+                        to={item.path}
+                        className={({ isActive }) =>
+                            `sidebar-link ${isActive ? 'active' : ''}`
+                        }
                     >
                         {item.icon}
                         <span>{item.label}</span>

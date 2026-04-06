@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, Sun, Moon, LogOut, User, ChevronDown } from 'lucide-react';
+import { Menu, LogOut, User, ChevronDown } from 'lucide-react';
 import Sidebar from './Sidebar';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
+import NotificationBell from '../NotificationBell';
+import ThemeToggle from '../ThemeToggle';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -55,21 +58,16 @@ const Layout = () => {
                         >
                             <Menu size={18} />
                         </button>
+                        <WorkspaceSwitcher />
+                        <div className="topbar-divider" style={{ width: '1px', height: '24px', backgroundColor: '#e2e8f0', margin: '0 12px' }} />
                         <div className="topbar-title-group">
                             <div className="topbar-title">{meta.title}</div>
                             {meta.subtitle && <div className="topbar-subtitle">{meta.subtitle}</div>}
                         </div>
                     </div>
                     <div className="topbar-right">
-                        <button
-                            type="button"
-                            className="theme-toggle-btn"
-                            onClick={toggleTheme}
-                            aria-label="Toggle theme"
-                            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                        >
-                            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                        </button>
+                        <NotificationBell />
+                        <ThemeToggle />
                         {user && (
                             <div className="topbar-profile" ref={profileRef}>
                                 <button

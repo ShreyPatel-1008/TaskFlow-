@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
@@ -12,6 +12,15 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const { login, googleLogin } = useAuth();
     const navigate = useNavigate();
+
+    // Wake up the Render backend as soon as the login page loads
+    // so it doesn't timeout when the user clicks the login button.
+    useEffect(() => {
+        // We catch and ignore errors here because the goal is just to start 
+        // the server spinning up, we don't care about the response.
+        fetch(import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/health` : '/api/health')
+            .catch(() => {});
+    }, []);
 
     const handleGoogleSuccess = async (credentialResponse) => {
         setLoading(true);

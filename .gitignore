@@ -23,3 +23,10 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Uploaded files
+server/uploads/
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -17,13 +17,28 @@ export const AuthProvider = ({ children }) => {
         if (token) {
             API.get('/auth/me')
                 .then(res => {
+                    // Server confirmed the token — update cached user
                     setUser(res.data.user);
                     localStorage.setItem('taskflow_user', JSON.stringify(res.data.user));
                 })
-                .catch(() => {
-                    localStorage.removeItem('taskflow_token');
-                    localStorage.removeItem('taskflow_user');
-                    setUser(null);
+                .catch((err) => {
+                    const status = err.response?.status;
+                    if (status === 401) {
+                        // Token is genuinely invalid/expired — must log out
+                        localStorage.removeItem('taskflow_token');
+                        localStorage.removeItem('taskflow_user');
+                        setUser(null);
+                    } else {
+                        // Network error, timeout, or server cold-starting (5xx, no response).
+                        // Keep the cached user so the user stays on their dashboard.
+                        // The API interceptor will re-validate on the next real request.
+                        const cachedUser = localStorage.getItem('taskflow_user');
+                        if (cachedUser) {
+                            setUser(JSON.parse(cachedUser));
+                        } else {
+                            setUser(null);
+                        }
+                    }
                 })
                 .finally(() => setLoading(false));
         } else {

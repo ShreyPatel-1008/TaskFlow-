@@ -3,7 +3,7 @@ const Note = require('../models/Note');
 // Get all notes
 exports.getNotes = async (req, res) => {
     try {
-        const notes = await Note.find({ userId: req.userId })
+        const notes = await Note.find({ workspaceId: req.workspaceId })
             .sort({ isPinned: -1, updatedAt: -1 });
         res.json({ notes });
     } catch (error) {
@@ -24,7 +24,8 @@ exports.createNote = async (req, res) => {
             title: title || '',
             content,
             color: color || 'yellow',
-            userId: req.userId
+            userId: req.userId,
+            workspaceId: req.workspaceId
         });
 
         res.status(201).json({ note });
@@ -40,7 +41,7 @@ exports.createNote = async (req, res) => {
 // Update note
 exports.updateNote = async (req, res) => {
     try {
-        const note = await Note.findOne({ _id: req.params.id, userId: req.userId });
+        const note = await Note.findOne({ _id: req.params.id, workspaceId: req.workspaceId });
 
         if (!note) {
             return res.status(404).json({ message: 'Note not found' });
@@ -67,7 +68,7 @@ exports.updateNote = async (req, res) => {
 // Toggle pin
 exports.togglePin = async (req, res) => {
     try {
-        const note = await Note.findOne({ _id: req.params.id, userId: req.userId });
+        const note = await Note.findOne({ _id: req.params.id, workspaceId: req.workspaceId });
 
         if (!note) {
             return res.status(404).json({ message: 'Note not found' });
@@ -84,7 +85,7 @@ exports.togglePin = async (req, res) => {
 // Delete note
 exports.deleteNote = async (req, res) => {
     try {
-        const note = await Note.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+        const note = await Note.findOneAndDelete({ _id: req.params.id, workspaceId: req.workspaceId });
 
         if (!note) {
             return res.status(404).json({ message: 'Note not found' });

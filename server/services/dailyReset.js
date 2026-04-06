@@ -3,9 +3,12 @@ const Task = require('../models/Task');
 const DailyHistory = require('../models/DailyHistory');
 
 /**
- * Perform the daily reset:
- * 1. Save current status of all daily tasks to DailyHistory
- * 2. Reset all daily tasks to NOT_STARTED
+ * Perform the daily reset PER USER:
+ * 1. Save current status of each user's daily tasks to DailyHistory
+ * 2. Reset only THAT user's daily tasks to NOT_STARTED
+ *
+ * NOTE: Only tasks where isDaily=true are reset. Regular tasks (isDaily=false)
+ * are NEVER touched — they persist permanently in the database.
  */
 const performDailyReset = async (dateForHistory) => {
     const dailyTasks = await Task.find({ isDaily: true });
@@ -15,45 +18,57 @@ const performDailyReset = async (dateForHistory) => {
         return;
     }
 
-    // Save history records
-    const historyRecords = dailyTasks.map(task => ({
-        taskId: task._id,
-        userId: task.userId,
-        taskTitle: task.title,
-        category: task.category,
-        status: task.status,
-        wasCompleted: task.status === 'COMPLETED',
-        date: dateForHistory
-    }));
+    // Group tasks by userId so we process each user independently
+    const tasksByUser = {};
+    dailyTasks.forEach(task => {
+        const uid = task.userId.toString();
+        if (!tasksByUser[uid]) tasksByUser[uid] = [];
+        tasksByUser[uid].push(task);
+    });
 
-    await DailyHistory.insertMany(historyRecords);
-    console.log(`📝 [RESET] Saved ${historyRecords.length} daily history records for ${dateForHistory.toDateString()}`);
+    let totalHistorySaved = 0;
+    let totalReset = 0;
 
-    // Reset all daily tasks to NOT_STARTED
-    const result = await Task.updateMany(
-        { isDaily: true },
-        {
-            $set: {
-                status: 'NOT_STARTED',
-                completedAt: null
-            }
-        }
-    );
+    for (const [uid, tasks] of Object.entries(tasksByUser)) {
+        // Save history records for this user
+        const historyRecords = tasks.map(task => ({
+            taskId: task._id,
+            userId: task.userId,
+            taskTitle: task.title,
+            category: task.category,
+            status: task.status,
+            wasCompleted: task.status === 'COMPLETED',
+            date: dateForHistory
+        }));
 
-    console.log(`✅ [RESET] Reset ${result.modifiedCount} daily tasks to NOT_STARTED`);
+        await DailyHistory.insertMany(historyRecords);
+        totalHistorySaved += historyRecords.length;
+
+        // Reset ONLY this user's daily tasks by their exact _ids
+        const taskIds = tasks.map(t => t._id);
+        const result = await Task.updateMany(
+            { _id: { $in: taskIds }, isDaily: true },
+            { $set: { status: 'NOT_STARTED', completedAt: null } }
+        );
+        totalReset += result.modifiedCount;
+    }
+
+    console.log(`📝 [RESET] Saved ${totalHistorySaved} history records for ${dateForHistory.toDateString()}`);
+    console.log(`✅ [RESET] Reset ${totalReset} daily tasks to NOT_STARTED`);
 };
 
 /**
  * Check if a daily reset was missed (e.g., server was off at 4 AM).
- * Runs on server startup. Checks if there's a DailyHistory record
- * for yesterday. If not, performs the reset immediately.
+ * Runs on server startup.
+ *
+ * IMPORTANT: Only triggers if there are daily tasks AND no history exists
+ * for yesterday. This prevents false resets on a fresh server start.
  */
 const checkMissedReset = async () => {
     try {
         console.log('🔍 [STARTUP] Checking for missed daily reset...');
 
         const now = new Date();
-        // "Yesterday" = the last full day that should have been recorded
         const yesterday = new Date(now);
         yesterday.setDate(yesterday.getDate() - 1);
         yesterday.setHours(0, 0, 0, 0);
@@ -61,16 +76,19 @@ const checkMissedReset = async () => {
         const todayStart = new Date(now);
         todayStart.setHours(0, 0, 0, 0);
 
-        // Check if we already have history for yesterday
+        // Only run if there are actually daily tasks in the DB
+        const hasDailyTasks = await Task.exists({ isDaily: true });
+        if (!hasDailyTasks) {
+            console.log('✅ [STARTUP] No daily tasks exist. Skipping reset check.');
+            return;
+        }
+
+        // Check if history for yesterday already exists
         const existingHistory = await DailyHistory.findOne({
-            date: {
-                $gte: yesterday,
-                $lt: todayStart
-            }
+            date: { $gte: yesterday, $lt: todayStart }
         });
 
         if (!existingHistory) {
-            // No history for yesterday means the 4 AM reset was missed
             console.log('⚠️ [STARTUP] Missed daily reset detected! Running reset now...');
             await performDailyReset(yesterday);
             console.log('✅ [STARTUP] Missed reset completed successfully!');
@@ -83,8 +101,7 @@ const checkMissedReset = async () => {
 };
 
 /**
- * Daily Task Reset Cron Job
- * Runs every day at 4:00 AM IST.
+ * Daily Task Reset Cron Job — runs every day at 4:00 AM IST.
  */
 const initDailyResetCron = () => {
     cron.schedule('0 4 * * *', async () => {

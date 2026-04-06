@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const requireRole = require('../middleware/requireRole');
 const {
     getDashboardStats,
     getWeeklyAnalytics,
@@ -11,12 +11,16 @@ const {
 } = require('../controllers/analyticsController');
 const { getWeeklyFocusHours } = require('../controllers/timeController');
 
-router.get('/dashboard', auth, getDashboardStats);
-router.get('/weekly', auth, getWeeklyAnalytics);
-router.get('/monthly', auth, getMonthlyAnalytics);
-router.get('/heatmap', auth, getHeatmapData);
-router.get('/streak', auth, getStreak);
-router.get('/insights', auth, getInsights);
-router.get('/focus-hours', auth, getWeeklyFocusHours);
+// NOTE: `auth` and `attachWorkspace` are applied at the router level
+// in server.js.
+
+// All analytics are read-only — viewers and above can access
+router.get('/dashboard',   requireRole('viewer'), getDashboardStats);
+router.get('/weekly',      requireRole('viewer'), getWeeklyAnalytics);
+router.get('/monthly',     requireRole('viewer'), getMonthlyAnalytics);
+router.get('/heatmap',     requireRole('viewer'), getHeatmapData);
+router.get('/streak',      requireRole('viewer'), getStreak);
+router.get('/insights',    requireRole('viewer'), getInsights);
+router.get('/focus-hours', requireRole('viewer'), getWeeklyFocusHours);
 
 module.exports = router;

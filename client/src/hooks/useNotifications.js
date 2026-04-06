@@ -1,0 +1,96 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import API from '../utils/api';
+
+export const useNotifications = () => {
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const pollInterval = useRef(null);
+
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const res = await API.get('/notifications/unread-count');
+      setUnreadCount(res.data.count);
+    } catch (err) {
+      console.error('Failed to fetch unread count:', err);
+    }
+  }, []);
+
+  const fetchNotifications = async (before = null) => {
+    setLoading(true);
+    try {
+      const url = before 
+        ? `/notifications?before=${before}&limit=20` 
+        : '/notifications?limit=20';
+        
+      const res = await API.get(url);
+      
+      if (before) {
+        setNotifications(prev => [...prev, ...res.data.notifications]);
+      } else {
+        setNotifications(res.data.notifications);
+      }
+      
+      setUnreadCount(res.data.unreadCount);
+      setHasMore(res.data.hasMore);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markRead = async (id) => {
+    // Optimistic update
+    setNotifications(prev => 
+      prev.map(n => n._id === id ? { ...n, read: true } : n)
+    );
+    // Don't decrease unreadCount manually unless we're sure
+    try {
+      await API.patch(`/notifications/${id}/read`);
+      await fetchUnreadCount();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const markAllRead = async () => {
+    // Optimistic
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setUnreadCount(0);
+    try {
+      await API.patch('/notifications/read-all');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const loadMore = () => {
+    if (notifications.length > 0 && hasMore) {
+      const lastCreated = notifications[notifications.length - 1].createdAt;
+      fetchNotifications(lastCreated);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+    // Poll for unread count every 30s
+    pollInterval.current = setInterval(fetchUnreadCount, 30000);
+    
+    return () => {
+      if (pollInterval.current) clearInterval(pollInterval.current);
+    };
+  }, [fetchUnreadCount]);
+
+  return {
+    notifications,
+    unreadCount,
+    loading,
+    hasMore,
+    fetchNotifications,
+    markRead,
+    markAllRead,
+    loadMore
+  };
+};

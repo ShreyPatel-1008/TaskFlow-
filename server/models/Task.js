@@ -39,19 +39,57 @@ const taskSchema = new mongoose.Schema({
     },
     isDaily: {
         type: Boolean,
-        default: true
+        default: false
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true,
         index: true
+    },
+    assigneeId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+        index: true
+    },
+    workspaceId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Workspace',
+        required: true,
+        index: true
+    },
+    lastOverdueNotifiedAt: {
+        type: Date,
+        default: null
+    },
+    // Custom fields
+    customFields: [{
+        fieldId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomField' },
+        value: mongoose.Schema.Types.Mixed
+    }],
+    // Recurrence
+    recurrence: {
+        enabled: { type: Boolean, default: false },
+        frequency: { type: String, enum: ['daily', 'weekly', 'monthly'], default: null },
+        interval: { type: Number, default: 1 },
+        daysOfWeek: { type: [Number], default: [] },
+        dayOfMonth: { type: Number, default: null },
+        nextRunAt: { type: Date, default: null },
+        lastRunAt: { type: Date, default: null },
+        parentTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null }
+    },
+    isTemplate: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true
 });
 
 // Index for efficient queries
+taskSchema.index({ workspaceId: 1, userId: 1 });
+taskSchema.index({ workspaceId: 1, status: 1 });
 taskSchema.index({ userId: 1, status: 1 });
 taskSchema.index({ userId: 1, createdAt: -1 });
 taskSchema.index({ userId: 1, completedAt: -1 });

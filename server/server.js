@@ -11,6 +11,17 @@ const authRoutes = require('./routes/auth');
 const taskRoutes = require('./routes/tasks');
 const analyticsRoutes = require('./routes/analytics');
 const noteRoutes = require('./routes/notes');
+const workspaceRoutes = require('./routes/workspaces');
+const inviteRoutes = require('./routes/invites');
+const commentRoutes = require('./routes/comments');
+const notificationRoutes = require('./routes/notifications');
+const dashboardRoutes = require('./routes/dashboard');
+const customFieldRoutes = require('./routes/customFields');
+const attachmentRoutes = require('./routes/attachments');
+const { startOverdueChecker } = require('./jobs/overdueChecker');
+const { startRecurringTasksJob } = require('./jobs/recurringTasks');
+const auth = require('./middleware/auth');
+const attachWorkspace = require('./middleware/attachWorkspace');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -20,6 +31,8 @@ connectDB().then(async () => {
     seedDatabase();
     initDailyResetCron();
     await checkMissedReset();
+    startOverdueChecker();
+    startRecurringTasksJob();
 
     // One-time migration: mark existing tasks as daily so they persist across days
     try {
@@ -48,14 +61,25 @@ app.use(cors({
     origin: process.env.CLIENT_URL || '*',
     credentials: true
 }));
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '50kb' }));
 app.use('/api/', limiter);
+
+// Static file serving for local uploads
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/notes', noteRoutes);
+app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/invites', inviteRoutes);
+app.use('/api/tasks', auth, attachWorkspace, taskRoutes);
+app.use('/api/tasks/:taskId/comments', auth, attachWorkspace, commentRoutes);
+app.use('/api/analytics', auth, attachWorkspace, analyticsRoutes);
+app.use('/api/notes', auth, attachWorkspace, noteRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/workspaces/:id/custom-fields', customFieldRoutes);
+app.use('/api/tasks/:taskId/attachments', auth, attachWorkspace, attachmentRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
