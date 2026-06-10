@@ -27,7 +27,11 @@ export const useInvites = (workspaceId) => {
         try {
             const response = await API.post('/invites', { email, role });
             setInvites([response.data, ...invites]);
-            toast.success(`Invite sent to ${email}`);
+            if (response.data.emailSent === false) {
+                toast.error('Invite created, but email failed to send. Please manually copy the link from pending invites.', { duration: 6000 });
+            } else {
+                toast.success(`Invite sent to ${email}`);
+            }
             return response.data;
         } catch (error) {
             const message = error.response?.data?.message || 'Failed to send invite';

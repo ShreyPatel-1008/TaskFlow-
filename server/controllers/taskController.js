@@ -6,7 +6,7 @@ const { logActivity } = require('../services/activity');
 // Get all tasks with filtering, sorting, pagination
 exports.getTasks = async (req, res) => {
     try {
-        const { status, priority, category, search, sortBy, order, page, limit } = req.query;
+        const { status, priority, category, search, assigneeId, sortBy, order, page, limit } = req.query;
 
         // FILTER BY WORKSPACE ID
         const query = { workspaceId: req.workspaceId };
@@ -19,6 +19,9 @@ exports.getTasks = async (req, res) => {
         if (status) query.status = status;
         if (priority) query.priority = priority;
         if (category) query.category = category;
+        if (assigneeId) {
+            query.assigneeId = assigneeId === 'unassigned' ? null : assigneeId;
+        }
         if (search) {
             query.$or = [
                 { title: { $regex: search, $options: 'i' } },
@@ -34,7 +37,8 @@ exports.getTasks = async (req, res) => {
         const skip = (pageNum - 1) * limitNum;
 
         const [tasks, total] = await Promise.all([
-            Task.find(query).sort(sortOptions).skip(skip).limit(limitNum),
+            Task.find(query).sort(sortOptions).skip(skip).limit(limitNum)
+                .populate('assigneeId', 'name avatar email'),
             Task.countDocuments(query)
         ]);
 
@@ -66,7 +70,8 @@ exports.getTodayTasks = async (req, res) => {
                 { createdAt: { $gte: today, $lt: tomorrow } },
                 { dueDate: { $gte: today, $lt: tomorrow } }
             ]
-        }).sort({ priority: -1, createdAt: -1 });
+        }).sort({ priority: -1, createdAt: -1 })
+          .populate('assigneeId', 'name avatar email');
 
         res.json({ tasks });
     } catch (error) {
@@ -117,6 +122,8 @@ exports.createTask = async (req, res) => {
           { taskId: task._id }
         );
 
+        await task.populate('assigneeId', 'name avatar email');
+
         res.status(201).json({ task });
     } catch (error) {
         if (error.name === 'ValidationError') {
@@ -136,7 +143,7 @@ exports.updateTask = async (req, res) => {
             return res.status(404).json({ message: 'Task not found' });
         }
 
-        const allowedUpdates = ['title', 'description', 'status', 'priority', 'category', 'dueDate', 'isDaily'];
+        const allowedUpdates = ['title', 'description', 'status', 'priority', 'category', 'dueDate', 'isDaily', 'assigneeId'];
         allowedUpdates.forEach(field => {
             if (req.body[field] !== undefined) {
                 task[field] = req.body[field];
@@ -144,6 +151,10 @@ exports.updateTask = async (req, res) => {
         });
 
         await task.save();
+        
+        // Populate assignee before sending response
+        await task.populate('assigneeId', 'name avatar email');
+        
         res.json({ task });
     } catch (error) {
         if (error.name === 'ValidationError') {

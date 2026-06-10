@@ -50,10 +50,15 @@ router.post('/', auth, attachWorkspace, requireRole('admin'), async (req, res) =
             invitedBy: req.user._id
         });
 
-        // Send Email (non-blocking)
+        // Send Email (blocking but fault-tolerant)
         const workspace = await Workspace.findById(req.workspaceId);
-        sendInviteEmail(email, req.user.name, workspace.name, invite.token)
-            .catch(err => console.error('Failed to send invite email:', err));
+        let emailSent = true;
+        try {
+            await sendInviteEmail(email, req.user.name, workspace.name, invite.token);
+        } catch (emailErr) {
+            console.error('Failed to send invite email:', emailErr);
+            emailSent = false;
+        }
 
         // --- NOTIFICATIONS ---
         // If the user already has an account, notify them in-app
@@ -69,7 +74,7 @@ router.post('/', auth, attachWorkspace, requireRole('admin'), async (req, res) =
             });
         }
 
-        res.status(201).json(invite);
+        res.status(201).json({ ...invite._doc, emailSent });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

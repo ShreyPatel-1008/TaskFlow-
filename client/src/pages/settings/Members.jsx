@@ -7,7 +7,7 @@ import { usePermission } from '../../hooks/usePermission';
 import PermissionGate from '../../components/PermissionGate';
 import RoleBadge from '../../components/RoleBadge';
 import InviteModal from '../../components/workspaces/InviteModal';
-import { UserPlus, Shield, User as UserIcon, Trash2, Clock, Mail, ChevronDown } from 'lucide-react';
+import { UserPlus, Shield, User as UserIcon, Trash2, Clock, Mail, ChevronDown, Link } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Members = () => {
@@ -48,6 +48,12 @@ const Members = () => {
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to remove member');
         }
+    };
+
+    const copyInviteLink = (token) => {
+        const link = `${window.location.origin}/invite/${token}`;
+        navigator.clipboard.writeText(link);
+        toast.success('Invite link copied to clipboard!');
     };
 
     const handleRoleChange = async (userId, newRole) => {
@@ -204,6 +210,13 @@ const Members = () => {
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <RoleBadge role={invite.role} size="xs" />
+                                    <button
+                                        onClick={() => copyInviteLink(invite.token)}
+                                        className="btn btn-ghost btn-icon btn-sm"
+                                        title="Copy Invite Link"
+                                    >
+                                        <Link size={14} style={{ color: 'var(--text-muted)' }} />
+                                    </button>
                                     <button
                                         onClick={() => revokeInvite(invite.token)}
                                         style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px' }}

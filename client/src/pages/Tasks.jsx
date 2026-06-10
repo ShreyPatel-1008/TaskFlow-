@@ -2,29 +2,37 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTask } from '../context/TaskContext';
 import TaskCard from '../components/tasks/TaskCard';
 import TaskModal from '../components/tasks/TaskModal';
-import { Plus, Search, Filter, ListFilter } from 'lucide-react';
+import { Plus, Search, Filter, ListFilter, User as UserIcon } from 'lucide-react';
 import { getStatusLabel, STATUSES, PRIORITIES, CATEGORIES } from '../utils/helpers';
+import { useAuth } from '../context/AuthContext';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 const Tasks = () => {
+    const { user: currentUser } = useAuth();
+    const { activeWorkspace } = useWorkspace();
     const { tasks, loading, fetchTasks, createTask, updateTask, deleteTask, fetchCategories } = useTask();
     const [showModal, setShowModal] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
     const [search, setSearch] = useState('');
-    const [filters, setFilters] = useState({ status: '', priority: '', category: '' });
+    const [filters, setFilters] = useState({ status: '', priority: '', category: '', assigneeId: '' });
     const [showFilters, setShowFilters] = useState(false);
 
     const loadTasks = useCallback(() => {
+        if (!activeWorkspace) return;
         const params = { search: search || undefined };
         if (filters.status) params.status = filters.status;
         if (filters.priority) params.priority = filters.priority;
         if (filters.category) params.category = filters.category;
+        if (filters.assigneeId) params.assigneeId = filters.assigneeId;
         fetchTasks(params);
-    }, [fetchTasks, search, filters]);
+    }, [fetchTasks, search, filters, activeWorkspace]);
 
     useEffect(() => {
-        loadTasks();
-        fetchCategories();
-    }, [loadTasks, fetchCategories]);
+        if (activeWorkspace) {
+            loadTasks();
+            fetchCategories();
+        }
+    }, [loadTasks, fetchCategories, activeWorkspace]);
 
     const handleCreateTask = async (data) => {
         await createTask(data);
@@ -46,11 +54,11 @@ const Tasks = () => {
     };
 
     const clearFilters = () => {
-        setFilters({ status: '', priority: '', category: '' });
+        setFilters({ status: '', priority: '', category: '', assigneeId: '' });
         setSearch('');
     };
 
-    const hasActiveFilters = filters.status || filters.priority || filters.category || search;
+    const hasActiveFilters = filters.status || filters.priority || filters.category || filters.assigneeId || search;
 
     return (
         <div className="page-container">
@@ -82,6 +90,17 @@ const Tasks = () => {
                         />
                     </div>
                     <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                        <button
+                            className={`btn ${filters.assigneeId === currentUser._id ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => setFilters(prev => ({ 
+                                ...prev, 
+                                assigneeId: prev.assigneeId === currentUser._id ? '' : currentUser._id 
+                            }))}
+                            type="button"
+                        >
+                            <UserIcon size={16} />
+                            My Tasks
+                        </button>
                         <button
                             className={`btn ${showFilters ? 'btn-primary' : 'btn-secondary'}`}
                             onClick={() => setShowFilters(!showFilters)}
@@ -190,6 +209,9 @@ const Tasks = () => {
                         </div>
                         <div className="notion-col-priority">
                             <span style={{ marginRight: '6px', opacity: 0.7 }}>🔼</span> Priority
+                        </div>
+                        <div className="notion-col-assignee">
+                            <span style={{ marginRight: '6px', opacity: 0.7 }}>👤</span> Assignee
                         </div>
                         <div className="notion-col-due">
                             <span style={{ marginRight: '6px', opacity: 0.7 }}>📅</span> Due Date

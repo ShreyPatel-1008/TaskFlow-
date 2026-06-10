@@ -2,12 +2,21 @@ const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
+    port: Number(process.env.EMAIL_PORT) || 587,
+    secure: false, // false for port 587 (STARTTLS)
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
+    },
+    tls: {
+        rejectUnauthorized: false // Fix for self-signed cert in chain
     }
 });
+
+// Verify connection on startup
+transporter.verify()
+    .then(() => console.log('✅ Email service connected'))
+    .catch(err => console.error('❌ Email service error:', err.message));
 
 /**
  * Sends a workspace invitation email.

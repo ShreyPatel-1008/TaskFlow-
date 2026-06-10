@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import API from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { RefreshCw, CheckCircle2, UserPlus, AlertCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 const AcceptInvite = () => {
     const { token } = useParams();
@@ -23,6 +22,7 @@ const AcceptInvite = () => {
                 const status = err.response?.status;
                 if (status === 410) setError('This invite has expired.');
                 else if (status === 404) setError('Invite not found.');
+                else if (status === 400) setError('This invite has already been accepted.');
                 else setError('Something went wrong. Please check your link.');
             } finally {
                 setLoading(false);
@@ -33,7 +33,6 @@ const AcceptInvite = () => {
 
     const handleAccept = async () => {
         if (!isAuthenticated) {
-            // Save current URL for post-login redirect
             navigate(`/login?redirect=/invite/${token}`);
             return;
         }
@@ -41,12 +40,17 @@ const AcceptInvite = () => {
         setAccepting(true);
         try {
             const response = await API.post(`/invites/${token}/accept`);
-            toast.success(response.data.message);
-            // Switch to the dynamic dashboard which will fetch the new workspace
-            window.location.href = '/'; 
+            
+            // Fetch workspace access and switch locally before navigation.
+            // This prevents reloading the page on the used invite token.
+            const switchResponse = await API.post(`/workspaces/${response.data.workspaceId}/switch`);
+            const newWs = switchResponse.data.workspace;
+            newWs.role = switchResponse.data.role;
+            localStorage.setItem('activeWorkspace', JSON.stringify(newWs));
+
+            window.location.href = '/';
         } catch (err) {
             const message = err.response?.data?.message || 'Failed to join workspace';
-            toast.error(message);
             setError(message);
         } finally {
             setAccepting(false);
@@ -54,18 +58,24 @@ const AcceptInvite = () => {
     };
 
     if (loading) return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50">
-            <RefreshCw className="animate-spin text-blue-600" size={32} />
+        <div className="auth-container">
+            <div className="spinner" />
         </div>
     );
 
     if (error) return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
-                <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Invite Error</h1>
-                <p className="text-gray-600 mb-8">{error}</p>
-                <button onClick={() => navigate('/')} className="w-full py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200">
+        <div className="auth-container">
+            <div className="auth-card" style={{ textAlign: 'center' }}>
+                <AlertCircle size={48} style={{ color: 'var(--color-danger)', margin: '0 auto 16px' }} />
+                <h2 style={{ margin: '0 0 8px', fontSize: '1.375rem' }}>
+                    {error === 'This invite has already been accepted.' ? 'Already Joined!' : 'Invite Error'}
+                </h2>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
+                    {error === 'This invite has already been accepted.'
+                        ? 'You have already joined this workspace. You can close this window or continue to your dashboard.'
+                        : error}
+                </p>
+                <button onClick={() => navigate('/')} className="btn btn-primary" style={{ width: '100%' }}>
                     Go to Dashboard
                 </button>
             </div>
@@ -73,38 +83,54 @@ const AcceptInvite = () => {
     );
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4 font-sans">
-            <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-lg w-full text-center border border-gray-100">
-                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 transform rotate-3 hover:rotate-0 transition-transform">
-                    <UserPlus size={40} />
+        <div className="auth-container">
+            <div className="auth-card" style={{ textAlign: 'center' }}>
+                <div style={{
+                    width: '72px', height: '72px', borderRadius: '20px',
+                    background: 'var(--color-info-bg)', color: 'var(--color-info)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 20px', transform: 'rotate(3deg)',
+                    transition: 'transform var(--transition-fast)'
+                }}>
+                    <UserPlus size={36} />
                 </div>
                 
-                <h1 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">Collaboration Awaits!</h1>
-                <p className="text-gray-600 text-lg mb-8 leading-relaxed">
-                    <strong>{inviteData.inviterName}</strong> has invited you to join the team at <span className="text-blue-600 font-bold">"{inviteData.workspaceName}"</span>.
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0 0 8px' }}>Collaboration Awaits!</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', lineHeight: 1.6, marginBottom: '24px' }}>
+                    <strong>{inviteData.inviterName}</strong> has invited you to join
+                    <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}> "{inviteData.workspaceName}"</span>.
                 </p>
 
-                <div className="bg-blue-50 rounded-2xl p-4 mb-8 flex items-start text-left gap-3">
-                    <CheckCircle2 className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                    <p className="text-sm text-blue-800">
+                <div style={{
+                    background: 'var(--color-info-bg)', borderRadius: 'var(--radius-md)',
+                    padding: '14px 16px', marginBottom: '24px',
+                    display: 'flex', alignItems: 'flex-start', gap: '10px', textAlign: 'left'
+                }}>
+                    <CheckCircle2 size={18} style={{ color: 'var(--color-info)', flexShrink: 0, marginTop: '2px' }} />
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--color-info)', margin: 0 }}>
                         Joining will give you access to all tasks and shared resources within this workspace.
                     </p>
                 </div>
 
-                <div className="space-y-4">
-                    <button 
-                        onClick={handleAccept}
-                        disabled={accepting}
-                        className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 disabled:opacity-50 transition-all shadow-xl shadow-blue-200 transform hover:-translate-y-0.5"
-                    >
-                        {accepting ? 'Joining Workspace...' : isAuthenticated ? 'Accept & Join Team' : 'Sign in to Accept Invite'}
-                    </button>
-                    {!isAuthenticated && (
-                        <p className="text-xs text-gray-400">
-                            Don't have an account? <span className="text-blue-600 font-bold cursor-pointer hover:underline" onClick={() => navigate(`/register?redirect=/invite/${token}`)}>Register here</span>
-                        </p>
-                    )}
-                </div>
+                <button 
+                    onClick={handleAccept}
+                    disabled={accepting}
+                    className="btn btn-primary btn-lg"
+                    style={{ width: '100%' }}
+                >
+                    {accepting ? 'Joining Workspace...' : isAuthenticated ? 'Accept & Join Team' : 'Sign in to Accept Invite'}
+                </button>
+                {!isAuthenticated && (
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '12px' }}>
+                        Don't have an account?{' '}
+                        <span
+                            style={{ color: 'var(--accent-primary)', fontWeight: 700, cursor: 'pointer' }}
+                            onClick={() => navigate(`/register?redirect=/invite/${token}`)}
+                        >
+                            Register here
+                        </span>
+                    </p>
+                )}
             </div>
         </div>
     );

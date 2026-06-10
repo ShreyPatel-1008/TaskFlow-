@@ -2,6 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+
+// Some Windows/dev networks fail SSL verification for Google OAuth cert fetching
+if (process.env.NODE_ENV !== 'production' && process.env.ALLOW_INSECURE_TLS === 'true') {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 const connectDB = require('./config/db');
 const seedDatabase = require('./config/seed');
 const { initDailyResetCron, checkMissedReset } = require('./services/dailyReset');

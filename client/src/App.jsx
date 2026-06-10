@@ -16,6 +16,7 @@ import Members from './pages/settings/Members';
 import CustomFieldsPage from './pages/settings/CustomFieldsPage';
 import RecurringTasksPage from './pages/settings/RecurringTasksPage';
 import React from 'react';
+import { Toaster } from 'react-hot-toast';
 
 // This component prevents access to the app if no workspace is selected/available
 const WorkspaceGate = () => {
@@ -33,17 +34,21 @@ const WorkspaceGate = () => {
 
   if (isAuthenticated && !activeWorkspace) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold mb-4 text-gray-900">Get Started!</h1>
-          <p className="text-gray-600 mb-8">You haven't joined a workspace yet. Create one to start managing your team.</p>
+      <div className="auth-container">
+        <div className="auth-card" style={{ textAlign: 'center' }}>
+          <div className="auth-logo">
+            <div className="auth-logo-icon">⚡</div>
+            <h2>TaskFlow</h2>
+          </div>
+          <h3 className="auth-title">Get Started!</h3>
+          <p className="auth-subtitle">You haven't joined a workspace yet. Create one to start managing your team.</p>
           
-          <div className="space-y-4">
+          <div style={{ marginTop: '24px' }}>
              <input 
                id="new-workspace-name"
                type="text" 
                disabled={creating}
-               className="w-full p-3 border rounded-xl"
+               className="form-input"
                placeholder="Workspace Name (e.g. Acme Corp)"
                onKeyDown={async (e) => {
                  if (e.key === 'Enter' && e.target.value.trim() && !creating) {
@@ -57,7 +62,7 @@ const WorkspaceGate = () => {
                  }
                }}
              />
-             <p className="text-xs text-gray-400">{creating ? 'Creating...' : 'Press Enter to create and continue'}</p>
+             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px' }}>{creating ? 'Creating...' : 'Press Enter to create and continue'}</p>
           </div>
         </div>
       </div>
@@ -100,4 +105,11 @@ function App() {
   );
 }
 
-export default App;
+export default function AppWithToaster() {
+  return (
+    <>
+      <Toaster position="top-right" />
+      <App />
+    </>
+  );
+}

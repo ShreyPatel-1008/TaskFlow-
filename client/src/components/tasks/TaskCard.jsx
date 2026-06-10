@@ -48,7 +48,7 @@ const TaskCard = ({ task, index, onEdit, onDelete }) => {
                             </span>
                         )}
                         {task.isDaily && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', color: 'var(--accent-primary)', fontSize: '11px', background: 'rgba(108, 92, 231, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', color: 'var(--color-info)', fontSize: '11px', background: 'var(--color-info-bg)', padding: '2px 6px', borderRadius: '4px' }}>
                                 <RefreshCw size={10} /> Daily
                             </span>
                         )}
@@ -100,6 +100,30 @@ const TaskCard = ({ task, index, onEdit, onDelete }) => {
                 <span className={`notion-priority-badge ${getPriorityClass(task.priority)}`}>
                     {task.priority || 'None'}
                 </span>
+            </div>
+
+            <div className="notion-col-assignee">
+                {task.assigneeId ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                            width: '24px', height: '24px', borderRadius: '50%',
+                            background: 'var(--color-info-bg)', color: 'var(--color-info)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '11px', fontWeight: 700, overflow: 'hidden'
+                        }}>
+                            {task.assigneeId.avatar ? (
+                                <img src={task.assigneeId.avatar} alt={task.assigneeId.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                                task.assigneeId.name?.charAt(0).toUpperCase()
+                            )}
+                        </div>
+                        <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                            {task.assigneeId.name?.split(' ')[0]}
+                        </span>
+                    </div>
+                ) : (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Unassigned</span>
+                )}
             </div>
 
             <div className="notion-col-due">

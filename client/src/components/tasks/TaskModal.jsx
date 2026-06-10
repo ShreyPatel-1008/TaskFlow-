@@ -12,7 +12,8 @@ const TaskModal = ({ task, onClose, onSave }) => {
         priority: task?.priority || 'MEDIUM',
         category: task?.category || 'General',
         dueDate: task?.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
-        isDaily: task ? (task.isDaily ?? true) : true
+        isDaily: task ? (task.isDaily ?? true) : true,
+        assigneeId: task?.assigneeId?._id || task?.assigneeId || ''
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -45,7 +46,8 @@ const TaskModal = ({ task, onClose, onSave }) => {
         try {
             await onSave({
                 ...formData,
-                dueDate: formData.dueDate || null
+                dueDate: formData.dueDate || null,
+                assigneeId: formData.assigneeId || null
             });
             onClose();
         } catch (err) {
@@ -121,6 +123,7 @@ const TaskModal = ({ task, onClose, onSave }) => {
                             <div className="form-group">
                                 <label className="form-label">Category</label>
                                 <select name="category" className="form-select" value={formData.category} onChange={handleChange}>
+                                    <option value="">No Category</option>
                                     {CATEGORIES.map(cat => (
                                         <option key={cat} value={cat}>{cat}</option>
                                     ))}
@@ -128,15 +131,27 @@ const TaskModal = ({ task, onClose, onSave }) => {
                             </div>
 
                             <div className="form-group">
-                                <label className="form-label">Due Date</label>
-                                <input
-                                    type="date"
-                                    name="dueDate"
-                                    className="form-input"
-                                    value={formData.dueDate}
-                                    onChange={handleChange}
-                                />
+                                <label className="form-label">Assign To</label>
+                                <select name="assigneeId" className="form-select" value={formData.assigneeId} onChange={handleChange}>
+                                    <option value="">Unassigned</option>
+                                    {workspaceMembers && workspaceMembers.map(member => (
+                                        <option key={member._id} value={member._id}>
+                                            {member.name}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Due Date</label>
+                            <input
+                                type="date"
+                                name="dueDate"
+                                className="form-input"
+                                value={formData.dueDate}
+                                onChange={handleChange}
+                            />
                         </div>
 
                         {/* Daily Task Toggle */}

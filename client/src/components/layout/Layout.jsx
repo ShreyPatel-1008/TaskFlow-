@@ -17,7 +17,7 @@ const PAGE_META = {
 };
 
 const Layout = () => {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const profileRef = useRef(null);
     const location = useLocation();
@@ -38,6 +38,13 @@ const Layout = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Close sidebar on mobile when navigating
+    useEffect(() => {
+        if (window.innerWidth <= 768) {
+            setIsSidebarOpen(false);
+        }
+    }, [location.pathname]);
+
     const handleLogout = () => {
         setIsProfileOpen(false);
         logout();
@@ -46,6 +53,13 @@ const Layout = () => {
 
     return (
         <div className={`app-layout ${isSidebarOpen ? 'sidebar-open' : ''}`}>
+            {/* Added an overlay for mobile */}
+            {isSidebarOpen && (
+                <div 
+                    className="sidebar-overlay" 
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
             <Sidebar isOpen={isSidebarOpen} />
             <main className="main-content">
                 <header className="topbar">
