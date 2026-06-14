@@ -5,6 +5,7 @@ import { Clock, MessageSquare, AtSign, UserPlus, ShieldAlert, CheckCircle2 } fro
 const ICON_COLORS = {
   task_assigned: 'var(--color-info)',
   mentioned: '#a855f7',
+  mention: '#a855f7',
   comment_added: '#60a5fa',
   task_overdue: 'var(--color-warning)',
   role_changed: 'var(--color-danger)',
@@ -19,7 +20,8 @@ const NotificationItem = ({ notification, onClick }) => {
     const style = { color, flexShrink: 0 };
     switch (type) {
       case 'task_assigned': return <UserPlus size={15} style={style} />;
-      case 'mentioned': return <AtSign size={15} style={style} />;
+      case 'mentioned':
+      case 'mention': return <AtSign size={15} style={style} />;
       case 'comment_added': return <MessageSquare size={15} style={style} />;
       case 'task_overdue': return <Clock size={15} style={style} />;
       case 'role_changed': return <ShieldAlert size={15} style={style} />;

@@ -29,7 +29,12 @@ const userSchema = new mongoose.Schema({
         sparse: true
     },
     avatar: {
-        type: String
+        type: String,
+        default: ''
+    },
+    lastSeen: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true

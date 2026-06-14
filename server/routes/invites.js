@@ -3,6 +3,7 @@ const router = express.Router();
 const Invite = require('../models/Invite');
 const Workspace = require('../models/Workspace');
 const WorkspaceMember = require('../models/WorkspaceMember');
+const Channel = require('../models/Channel');
 const auth = require('../middleware/auth');
 const attachWorkspace = require('../middleware/attachWorkspace');
 const requireRole = require('../middleware/requireRole');
@@ -162,6 +163,12 @@ router.post('/:token/accept', auth, async (req, res) => {
 
         invite.status = 'accepted';
         await invite.save();
+
+        // Auto-add to #general channel
+        await Channel.findOneAndUpdate(
+            { workspaceId: invite.workspaceId, name: 'general', type: 'channel' },
+            { $addToSet: { members: req.user._id } }
+        );
 
         // Log activity — member joined
         logActivity(

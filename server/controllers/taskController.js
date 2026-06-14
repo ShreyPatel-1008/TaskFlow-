@@ -19,8 +19,18 @@ exports.getTasks = async (req, res) => {
         if (status) query.status = status;
         if (priority) query.priority = priority;
         if (category) query.category = category;
-        if (assigneeId) {
-            query.assigneeId = assigneeId === 'unassigned' ? null : assigneeId;
+
+        // Members only see tasks assigned to them
+        if (req.workspaceRole === 'member') {
+            query.assigneeId = req.userId;
+        } else if (assigneeId) {
+            if (assigneeId === 'me') {
+                query.assigneeId = req.userId;
+            } else if (assigneeId === 'unassigned') {
+                query.assigneeId = null;
+            } else {
+                query.assigneeId = assigneeId;
+            }
         }
         if (search) {
             query.$or = [

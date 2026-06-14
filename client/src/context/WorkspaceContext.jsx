@@ -4,23 +4,32 @@ import { useAuth } from './AuthContext';
 
 const WorkspaceContext = createContext();
 
+const readSavedWorkspaceId = () => {
+  const saved = localStorage.getItem('activeWorkspace');
+  if (!saved) return null;
+  try {
+    const parsed = JSON.parse(saved);
+    return parsed?._id ? String(parsed._id) : null;
+  } catch {
+    localStorage.removeItem('activeWorkspace');
+    return null;
+  }
+};
+
 export const WorkspaceProvider = ({ children }) => {
   const [workspaces, setWorkspaces] = useState([]);
-  const [activeWorkspace, setActiveWorkspace] = useState(null);
+  const [activeWorkspace, setActiveWorkspace] = useState(() => {
+    const saved = localStorage.getItem('activeWorkspace');
+    if (!saved) return null;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      localStorage.removeItem('activeWorkspace');
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
   const { isAuthenticated } = useAuth();
-
-  // Load active workspace from localStorage on initial boot
-  useEffect(() => {
-    const saved = localStorage.getItem('activeWorkspace');
-    if (saved) {
-      try {
-        setActiveWorkspace(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse saved workspace", e);
-      }
-    }
-  }, []);
 
   // Fetch workspaces when authenticated
   useEffect(() => {
@@ -39,19 +48,23 @@ export const WorkspaceProvider = ({ children }) => {
       setLoading(true);
       const response = await API.get('/workspaces/mine');
       setWorkspaces(response.data);
-      
-      // If no active workspace or current active is not in the list, set to first available
-      const saved = localStorage.getItem('activeWorkspace');
-      const savedObj = saved ? JSON.parse(saved) : null;
-      
-      if (response.data.length > 0) {
-        const stillExists = savedObj && response.data.find(w => w._id === savedObj._id);
-        if (!activeWorkspace || !stillExists) {
-          const defaultWs = response.data[0];
-          setActiveWorkspace(defaultWs);
-          localStorage.setItem('activeWorkspace', JSON.stringify(defaultWs));
-        }
+
+      if (response.data.length === 0) {
+        setActiveWorkspace(null);
+        localStorage.removeItem('activeWorkspace');
+        return;
       }
+
+      // Respect the workspace saved in localStorage (survives reload after switch).
+      // Do NOT use activeWorkspace state here — it may still be null on first fetch.
+      const savedId = readSavedWorkspaceId();
+      const matched = savedId
+        ? response.data.find((w) => String(w._id) === savedId)
+        : null;
+      const next = matched || response.data[0];
+
+      setActiveWorkspace(next);
+      localStorage.setItem('activeWorkspace', JSON.stringify(next));
     } catch (error) {
       console.error('Error fetching workspaces:', error);
     } finally {
@@ -62,14 +75,18 @@ export const WorkspaceProvider = ({ children }) => {
   const switchWorkspace = async (id) => {
     try {
       const response = await API.post(`/workspaces/${id}/switch`);
-      const newWs = response.data.workspace;
-      newWs.role = response.data.role;
-      
+      const workspace = response.data.workspace;
+      const newWs = {
+        ...workspace,
+        _id: workspace._id,
+        role: response.data.role,
+      };
+
       setActiveWorkspace(newWs);
       localStorage.setItem('activeWorkspace', JSON.stringify(newWs));
-      
-      // Clear task states by reloading or custom event
-      window.location.reload(); 
+
+      // Reload so task/dashboard state is cleared for the new workspace
+      window.location.reload();
     } catch (error) {
       console.error('Error switching workspace:', error);
       throw error;

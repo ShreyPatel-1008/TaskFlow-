@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTask } from '../context/TaskContext';
 import TaskCard from '../components/tasks/TaskCard';
 import TaskModal from '../components/tasks/TaskModal';
@@ -6,10 +7,21 @@ import { Plus, Search, Filter, ListFilter, User as UserIcon } from 'lucide-react
 import { getStatusLabel, STATUSES, PRIORITIES, CATEGORIES } from '../utils/helpers';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
+import PermissionGate from '../components/PermissionGate';
+import { usePermission } from '../hooks/usePermission';
+
+const getUserId = (user) => {
+    const id = user?.id || user?._id;
+    return id ? String(id) : '';
+};
 
 const Tasks = () => {
-    const { user: currentUser } = useAuth();
+    const { user: currentUser, loading: authLoading } = useAuth();
     const { activeWorkspace } = useWorkspace();
+    const { role } = usePermission();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const userId = getUserId(currentUser);
+    const isMember = role === 'member';
     const { tasks, loading, fetchTasks, createTask, updateTask, deleteTask, fetchCategories } = useTask();
     const [showModal, setShowModal] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
@@ -17,22 +29,52 @@ const Tasks = () => {
     const [filters, setFilters] = useState({ status: '', priority: '', category: '', assigneeId: '' });
     const [showFilters, setShowFilters] = useState(false);
 
+    // Members default to "My Tasks"; admins use URL params
+    useEffect(() => {
+        if (authLoading || !userId) return;
+
+        const assigneeParam = searchParams.get('assignee');
+        if (isMember && assigneeParam !== 'me') {
+            const next = new URLSearchParams(searchParams);
+            next.set('assignee', 'me');
+            setSearchParams(next, { replace: true });
+            return;
+        }
+
+        let assigneeId = '';
+        if (assigneeParam === 'me') assigneeId = userId;
+        else if (assigneeParam === 'unassigned') assigneeId = 'unassigned';
+
+        setFilters((prev) => {
+            if (prev.assigneeId === assigneeId) return prev;
+            return { ...prev, assigneeId };
+        });
+    }, [searchParams, userId, isMember, authLoading, setSearchParams]);
+
     const loadTasks = useCallback(() => {
-        if (!activeWorkspace) return;
+        if (!activeWorkspace || authLoading) return;
+        if (searchParams.get('assignee') === 'me' && !userId) return;
+
         const params = { search: search || undefined };
         if (filters.status) params.status = filters.status;
         if (filters.priority) params.priority = filters.priority;
         if (filters.category) params.category = filters.category;
-        if (filters.assigneeId) params.assigneeId = filters.assigneeId;
+
+        if (isMember || filters.assigneeId === userId) {
+            params.assigneeId = 'me';
+        } else if (filters.assigneeId) {
+            params.assigneeId = filters.assigneeId;
+        }
+
         fetchTasks(params);
-    }, [fetchTasks, search, filters, activeWorkspace]);
+    }, [fetchTasks, search, filters, activeWorkspace, isMember, userId, authLoading, searchParams]);
 
     useEffect(() => {
-        if (activeWorkspace) {
+        if (activeWorkspace && !authLoading) {
             loadTasks();
             fetchCategories();
         }
-    }, [loadTasks, fetchCategories, activeWorkspace]);
+    }, [loadTasks, fetchCategories, activeWorkspace, authLoading]);
 
     const handleCreateTask = async (data) => {
         await createTask(data);
@@ -54,8 +96,35 @@ const Tasks = () => {
     };
 
     const clearFilters = () => {
-        setFilters({ status: '', priority: '', category: '', assigneeId: '' });
+        setFilters({
+            status: '',
+            priority: '',
+            category: '',
+            assigneeId: isMember ? userId : '',
+        });
         setSearch('');
+        const next = new URLSearchParams(searchParams);
+        if (isMember) next.set('assignee', 'me');
+        else next.delete('assignee');
+        next.delete('due');
+        setSearchParams(next, { replace: true });
+    };
+
+    const toggleMyTasks = () => {
+        if (isMember) return;
+
+        const isActive = filters.assigneeId === userId;
+        const next = new URLSearchParams(searchParams);
+
+        if (isActive) {
+            setFilters((prev) => ({ ...prev, assigneeId: '' }));
+            next.delete('assignee');
+        } else {
+            setFilters((prev) => ({ ...prev, assigneeId: userId }));
+            next.set('assignee', 'me');
+        }
+
+        setSearchParams(next, { replace: true });
     };
 
     const hasActiveFilters = filters.status || filters.priority || filters.category || filters.assigneeId || search;
@@ -65,15 +134,19 @@ const Tasks = () => {
             <div className="page-header">
                 <div>
                     <h1>Tasks</h1>
-                    <p className="page-header-subtitle">Manage and track all your tasks</p>
+                    <p className="page-header-subtitle">
+                        {isMember ? 'Tasks assigned to you in this workspace' : 'Manage and track all your tasks'}
+                    </p>
                 </div>
-                <button id="create-task-btn" className="btn btn-primary" onClick={() => {
-                    setEditingTask(null);
-                    setShowModal(true);
-                }}>
-                    <Plus size={18} />
-                    New Task
-                </button>
+                <PermissionGate action="createTask">
+                    <button id="create-task-btn" className="btn btn-primary" onClick={() => {
+                        setEditingTask(null);
+                        setShowModal(true);
+                    }}>
+                        <Plus size={18} />
+                        New Task
+                    </button>
+                </PermissionGate>
             </div>
 
             {/* Toolbar: search, filters, summary */}
@@ -91,11 +164,8 @@ const Tasks = () => {
                     </div>
                     <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
                         <button
-                            className={`btn ${filters.assigneeId === currentUser._id ? 'btn-primary' : 'btn-secondary'}`}
-                            onClick={() => setFilters(prev => ({ 
-                                ...prev, 
-                                assigneeId: prev.assigneeId === currentUser._id ? '' : currentUser._id 
-                            }))}
+                            className={`btn ${filters.assigneeId === userId ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={toggleMyTasks}
                             type="button"
                         >
                             <UserIcon size={16} />

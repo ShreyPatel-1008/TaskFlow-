@@ -33,13 +33,13 @@ router.get('/today',         requireRole('viewer'), getTodayTasks);
 router.get('/categories',    requireRole('viewer'), getCategories);
 router.get('/daily-history', requireRole('viewer'), getDailyHistory);
 
-// --- Write routes — member and above can create/edit/delete ---
+// --- Write routes ---
 router.post('/',             requireRole('member'), createTask);
-router.put('/:id',           requireRole('member'), updateTask);
+router.put('/:id',           requireRole('admin'), updateTask);
 
 // @route   PATCH /api/tasks/:id
-// @desc    Update task details (including assignment)
-router.patch('/:id', requireRole('member'), async (req, res) => {
+// @desc    Update task details (including assignment) — admin only
+router.patch('/:id', requireRole('admin'), async (req, res) => {
     try {
         const { assigneeId, ...otherUpdates } = req.body;
         const oldTask = await Task.findById(req.params.id);
@@ -85,7 +85,7 @@ router.patch('/:id', requireRole('member'), async (req, res) => {
 });
 
 router.patch('/:id/status',  requireRole('member'), updateTaskStatus);
-router.delete('/:id',        requireRole('member'), deleteTask);
+router.delete('/:id',        requireRole('admin'), deleteTask);
 
 // --- Timer routes — member and above can track time ---
 router.post('/:id/timer/start', requireRole('member'), startTimer);
@@ -95,7 +95,7 @@ router.get('/timers/running',   requireRole('viewer'), getRunningTimers);
 
 // --- Recurrence routes ---
 // PATCH /api/tasks/:id/recurrence — set recurrence
-router.patch('/:id/recurrence', requireRole('member'), async (req, res) => {
+router.patch('/:id/recurrence', requireRole('admin'), async (req, res) => {
     try {
         const { frequency, interval, daysOfWeek, dayOfMonth } = req.body;
         const task = await Task.findOne({ _id: req.params.id, workspaceId: req.workspaceId });
@@ -124,7 +124,7 @@ router.patch('/:id/recurrence', requireRole('member'), async (req, res) => {
 });
 
 // DELETE /api/tasks/:id/recurrence — disable recurrence
-router.delete('/:id/recurrence', requireRole('member'), async (req, res) => {
+router.delete('/:id/recurrence', requireRole('admin'), async (req, res) => {
     try {
         const task = await Task.findOne({ _id: req.params.id, workspaceId: req.workspaceId });
         if (!task) return res.status(404).json({ message: 'Task not found' });
@@ -141,7 +141,7 @@ router.delete('/:id/recurrence', requireRole('member'), async (req, res) => {
 
 // --- Custom field values on tasks ---
 // PATCH /api/tasks/:id/custom-fields
-router.patch('/:id/custom-fields', requireRole('member'), async (req, res) => {
+router.patch('/:id/custom-fields', requireRole('admin'), async (req, res) => {
     try {
         const { fields } = req.body;
         if (!Array.isArray(fields)) {

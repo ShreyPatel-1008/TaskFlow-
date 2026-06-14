@@ -26,9 +26,10 @@ export const hasPermission = (userRole, requiredRole) => {
 export const ACTION_ROLES = Object.freeze({
     // Task actions
     createTask:       'member',
-    editTask:         'member',
-    deleteTask:       'member',
-    assignTask:       'member',
+    updateTaskStatus: 'member',
+    editTask:         'admin',
+    deleteTask:       'admin',
+    assignTask:       'admin',
 
     // Collaboration
     comment:          'member',

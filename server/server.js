@@ -8,6 +8,9 @@ if (process.env.NODE_ENV !== 'production' && process.env.ALLOW_INSECURE_TLS === 
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
+const { createServer } = require('http');
+const { Server } = require('socket.io');
+
 const connectDB = require('./config/db');
 const seedDatabase = require('./config/seed');
 const { initDailyResetCron, checkMissedReset } = require('./services/dailyReset');
@@ -24,13 +27,25 @@ const notificationRoutes = require('./routes/notifications');
 const dashboardRoutes = require('./routes/dashboard');
 const customFieldRoutes = require('./routes/customFields');
 const attachmentRoutes = require('./routes/attachments');
+const chatRoutes = require('./routes/chat');
+
 const { startOverdueChecker } = require('./jobs/overdueChecker');
 const { startRecurringTasksJob } = require('./jobs/recurringTasks');
 const auth = require('./middleware/auth');
 const attachWorkspace = require('./middleware/attachWorkspace');
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+    cors: {
+        origin: process.env.CLIENT_URL || '*',
+        methods: ['GET', 'POST']
+    }
+});
 const PORT = process.env.PORT || 5000;
+
+app.set('io', io);
+require('./socket/chatSocket')(io);
 
 // Connect to database, seed default user, start cron jobs
 connectDB().then(async () => {
@@ -86,6 +101,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/workspaces/:id/custom-fields', customFieldRoutes);
 app.use('/api/tasks/:taskId/attachments', auth, attachWorkspace, attachmentRoutes);
+app.use('/api/chat', auth, attachWorkspace, chatRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -103,7 +119,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
     console.log(`🚀 TaskFlow Server running on port ${PORT}`);
     console.log(`📊 API: http://localhost:${PORT}/api`);
 });

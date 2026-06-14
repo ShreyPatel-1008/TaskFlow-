@@ -69,4 +69,40 @@ const resolveMentions = async (handles, workspaceId) => {
     }
 };
 
-module.exports = { extractMentionHandles, resolveMentions };
+const parseChatMentions = async (text, workspaceId) => {
+    // Extract @username patterns from text
+    const mentionRegex = /@(\w+)/g;
+    const handles = [...text.matchAll(mentionRegex)].map(m => m[1]);
+    
+    if (handles.length === 0) return [];
+  
+    // Find matching users who are workspace members
+    const users = await User.find({
+      name: { 
+        $in: handles.map(h => new RegExp(h, 'i')) 
+      }
+    }).select('_id name');
+  
+    // Verify each matched user is workspace member
+    const memberIds = await WorkspaceMember.find({ 
+      workspaceId 
+    }).distinct('userId');
+  
+    return users.filter(u => 
+      memberIds.some(id => id.toString() === u._id.toString())
+    );
+};
+
+const parseSpecialMentions = (text) => {
+    return {
+        hasEveryone: /@everyone\b/i.test(text),
+        hasHere: /@here\b/i.test(text)
+    };
+};
+
+module.exports = { 
+    extractMentionHandles, 
+    resolveMentions,
+    parseChatMentions,
+    parseSpecialMentions
+};

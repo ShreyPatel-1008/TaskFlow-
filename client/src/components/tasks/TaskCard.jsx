@@ -3,9 +3,12 @@ import { Edit2, Trash2, Play, Square, Clock, Calendar as CalIcon, Tag, RefreshCw
 import { useTask } from '../../context/TaskContext';
 import { formatDate, getStatusLabel, getStatusClass, getPriorityClass, formatTime, isOverdue } from '../../utils/helpers';
 import PermissionGate from '../PermissionGate';
+import { usePermission } from '../../hooks/usePermission';
 
 const TaskCard = ({ task, index, onEdit, onDelete }) => {
     const { updateTaskStatus } = useTask();
+    const { can } = usePermission();
+    const canUpdateStatus = can('updateTaskStatus');
     const [isStatusOpen, setIsStatusOpen] = useState(false);
     const statusRef = useRef(null);
 
@@ -58,6 +61,7 @@ const TaskCard = ({ task, index, onEdit, onDelete }) => {
 
             <div className="notion-col-status">
                 <div className="notion-status-container" ref={statusRef}>
+                    {canUpdateStatus ? (
                     <button
                         className={`notion-status-badge ${getStatusClass(task.status)}`}
                         onClick={() => setIsStatusOpen(!isStatusOpen)}
@@ -65,7 +69,13 @@ const TaskCard = ({ task, index, onEdit, onDelete }) => {
                         <span className="status-dot"></span>
                         {getStatusLabel(task.status)}
                     </button>
-                    {isStatusOpen && (
+                    ) : (
+                    <span className={`notion-status-badge ${getStatusClass(task.status)}`} style={{ cursor: 'default' }}>
+                        <span className="status-dot"></span>
+                        {getStatusLabel(task.status)}
+                    </span>
+                    )}
+                    {canUpdateStatus && isStatusOpen && (
                         <div className="notion-status-dropdown">
                             <div className="notion-dropdown-section">
                                 <div className="notion-dropdown-header">To-do</div>

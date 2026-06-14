@@ -24,9 +24,15 @@ const QuickActions = () => {
         <ClipboardList size={16} /> My Tasks
       </button>
 
-      <button className="dash-qa-btn" onClick={() => navigate('/tasks')}>
-        <LayoutList size={16} /> View All Tasks
-      </button>
+      <PermissionGate action="editTask" fallback={
+        <button className="dash-qa-btn" onClick={() => navigate('/tasks?assignee=me')}>
+          <LayoutList size={16} /> My Tasks
+        </button>
+      }>
+        <button className="dash-qa-btn" onClick={() => navigate('/tasks')}>
+          <LayoutList size={16} /> View All Tasks
+        </button>
+      </PermissionGate>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import API from '../utils/api';
+import { useSocket } from '../context/SocketContext';
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState([]);
@@ -7,6 +8,7 @@ export const useNotifications = () => {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const pollInterval = useRef(null);
+  const { socket } = useSocket();
 
   const fetchUnreadCount = useCallback(async () => {
     try {
@@ -82,6 +84,37 @@ export const useNotifications = () => {
       if (pollInterval.current) clearInterval(pollInterval.current);
     };
   }, [fetchUnreadCount]);
+
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleChatMention = (data) => {
+        setUnreadCount(prev => prev + 1);
+        setNotifications(prev => [{
+            _id: Date.now().toString(),
+            type: 'mention',
+            text: data.isEveryone 
+                ? `${data.sender.name} mentioned @everyone in #${data.channelName}`
+                : data.isHere
+                ? `${data.sender.name} mentioned @here in #${data.channelName}`
+                : `${data.sender.name} mentioned you in #${data.channelName}`,
+            link: `/chat?channel=${data.channelId}`,
+            read: false,
+            actorId: { name: data.sender.name, avatar: data.sender.avatar },
+            createdAt: new Date()
+        }, ...prev]);
+
+        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+            new Notification('TaskFlow', {
+                body: `${data.sender.name} mentioned you in #${data.channelName}`,
+                icon: '/favicon.ico'
+            });
+        }
+    };
+
+    socket.on('chat_mention', handleChatMention);
+    return () => socket.off('chat_mention', handleChatMention);
+  }, [socket]);
 
   return {
     notifications,

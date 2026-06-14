@@ -3,6 +3,8 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { TaskProvider } from './context/TaskContext';
 import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext';
+import { SocketProvider } from './context/SocketContext';
+import { ChatProvider } from './context/ChatContext';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -11,6 +13,7 @@ import Tasks from './pages/Tasks';
 import Analytics from './pages/Analytics';
 import CalendarView from './pages/CalendarView';
 import Notes from './pages/Notes';
+import ChatPage from './pages/Chat';
 import AcceptInvite from './pages/AcceptInvite';
 import Members from './pages/settings/Members';
 import CustomFieldsPage from './pages/settings/CustomFieldsPage';
@@ -78,26 +81,31 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <WorkspaceProvider>
-            <TaskProvider>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/invite/:token" element={<AcceptInvite />} />
-                <Route element={<Layout />}>
-                  <Route element={<WorkspaceGate />}>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/tasks" element={<Tasks />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/calendar" element={<CalendarView />} />
-                    <Route path="/notes" element={<Notes />} />
-                    <Route path="/members" element={<Members />} />
-                    <Route path="/settings/custom-fields" element={<CustomFieldsPage />} />
-                    <Route path="/settings/recurring-tasks" element={<RecurringTasksPage />} />
-                  </Route>
-                </Route>
-                <Route path="*" element={<Navigate to="/" />} />
-              </Routes>
-            </TaskProvider>
+            <SocketProvider>
+              <ChatProvider>
+                <TaskProvider>
+                  <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/invite/:token" element={<AcceptInvite />} />
+                    <Route element={<Layout />}>
+                      <Route element={<WorkspaceGate />}>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/tasks" element={<Tasks />} />
+                        <Route path="/analytics" element={<Analytics />} />
+                        <Route path="/calendar" element={<CalendarView />} />
+                        <Route path="/notes" element={<Notes />} />
+                        <Route path="/chat" element={<ChatPage />} />
+                        <Route path="/members" element={<Members />} />
+                        <Route path="/settings/custom-fields" element={<CustomFieldsPage />} />
+                        <Route path="/settings/recurring-tasks" element={<RecurringTasksPage />} />
+                      </Route>
+                    </Route>
+                    <Route path="*" element={<Navigate to="/" />} />
+                  </Routes>
+                </TaskProvider>
+              </ChatProvider>
+            </SocketProvider>
           </WorkspaceProvider>
         </AuthProvider>
       </ThemeProvider>

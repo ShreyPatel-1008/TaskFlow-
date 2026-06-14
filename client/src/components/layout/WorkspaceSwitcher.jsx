@@ -67,6 +67,10 @@ const WorkspaceSwitcher = () => {
                             <button
                                 key={ws._id}
                                 onClick={() => {
+                                    if (String(activeWorkspace?._id) === String(ws._id)) {
+                                        setIsOpen(false);
+                                        return;
+                                    }
                                     switchWorkspace(ws._id);
                                     setIsOpen(false);
                                 }}
@@ -81,7 +85,7 @@ const WorkspaceSwitcher = () => {
                                         <RoleBadge role={ws.role} size="xs" />
                                     </div>
                                 </div>
-                                {activeWorkspace?._id === ws._id && <Check size={16} className="ws-item-check" />}
+                                {String(activeWorkspace?._id) === String(ws._id) && <Check size={16} className="ws-item-check" />}
                             </button>
                         ))}
                     </div>

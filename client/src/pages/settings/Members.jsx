@@ -71,6 +71,11 @@ const Members = () => {
         }
     };
 
+    const handleRevokeInvite = async (invite) => {
+        if (!window.confirm(`Revoke the invitation sent to ${invite.invitedEmail}?`)) return;
+        await revokeInvite(invite.token);
+    };
+
     const isOwner = (member) => activeWorkspace?.ownerId === member.userId._id;
     const isMe = (member) => currentUser?._id === member.userId._id;
 
@@ -218,7 +223,7 @@ const Members = () => {
                                         <Link size={14} style={{ color: 'var(--text-muted)' }} />
                                     </button>
                                     <button
-                                        onClick={() => revokeInvite(invite.token)}
+                                        onClick={() => handleRevokeInvite(invite)}
                                         style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px' }}
                                     >
                                         Revoke

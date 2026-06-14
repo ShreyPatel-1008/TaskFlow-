@@ -58,14 +58,17 @@ const AcceptInvite = () => {
     };
 
     if (loading) return (
-        <div className="auth-container">
-            <div className="spinner" />
+        <div className="auth-layout-wrapper" style={{ justifyContent: 'center', alignItems: 'center' }}>
+            <div className="auth-container" style={{ display: 'flex', justifyContent: 'center' }}>
+                <div className="spinner" />
+            </div>
         </div>
     );
 
     if (error) return (
-        <div className="auth-container">
-            <div className="auth-card" style={{ textAlign: 'center' }}>
+        <div className="auth-layout-wrapper" style={{ justifyContent: 'center', alignItems: 'center' }}>
+            <div className="auth-container">
+                <div className="auth-card" style={{ textAlign: 'center' }}>
                 <AlertCircle size={48} style={{ color: 'var(--color-danger)', margin: '0 auto 16px' }} />
                 <h2 style={{ margin: '0 0 8px', fontSize: '1.375rem' }}>
                     {error === 'This invite has already been accepted.' ? 'Already Joined!' : 'Invite Error'}
@@ -80,11 +83,13 @@ const AcceptInvite = () => {
                 </button>
             </div>
         </div>
+        </div>
     );
 
     return (
-        <div className="auth-container">
-            <div className="auth-card" style={{ textAlign: 'center' }}>
+        <div className="auth-layout-wrapper" style={{ justifyContent: 'center', alignItems: 'center' }}>
+            <div className="auth-container">
+                <div className="auth-card" style={{ textAlign: 'center' }}>
                 <div style={{
                     width: '72px', height: '72px', borderRadius: '20px',
                     background: 'var(--color-info-bg)', color: 'var(--color-info)',
@@ -132,6 +137,7 @@ const AcceptInvite = () => {
                     </p>
                 )}
             </div>
+        </div>
         </div>
     );
 };

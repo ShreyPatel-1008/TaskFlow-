@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Workspace = require('../models/Workspace');
 const WorkspaceMember = require('../models/WorkspaceMember');
+const Channel = require('../models/Channel');
 const auth = require('../middleware/auth');
 const attachWorkspace = require('../middleware/attachWorkspace');
 const requireRole = require('../middleware/requireRole');
@@ -24,6 +25,17 @@ router.post('/', auth, async (req, res) => {
             workspaceId: workspace._id,
             userId: req.user.id,
             role: 'admin'
+        });
+
+        // Auto-create #general channel
+        await Channel.create({
+            workspaceId: workspace._id,
+            name: 'general',
+            description: 'General discussion for the workspace',
+            type: 'channel',
+            members: [req.user.id],
+            createdBy: req.user.id,
+            isDefault: true
         });
 
         res.status(201).json(workspace);
