@@ -3,7 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 
 const MessageItem = ({ message, showAvatar }) => {
   const { user } = useAuth();
-  const isSender = message.senderId._id === user._id;
+  const sender = (typeof message.senderId === 'object' && message.senderId !== null) ? message.senderId : { name: 'Unknown User', avatar: '' };
+  const isSender = (sender._id || message.senderId) === user?._id;
 
   const renderMentions = (text) => {
     if (!text) return null;
@@ -43,16 +44,16 @@ const MessageItem = ({ message, showAvatar }) => {
     <div className={`message-item ${!showAvatar ? 'compact' : ''}`}>
       {showAvatar ? (
         <img 
-          src={message.senderId.avatar || '/default-avatar.png'} 
+          src={sender.avatar || '/default-avatar.png'} 
           className="message-avatar"
-          alt={message.senderId.name}
+          alt={sender.name}
         />
       ) : null}
       
       <div style={{ flex: 1, minWidth: 0 }}>
         {showAvatar && (
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '2px' }}>
-            <span className="message-sender">{message.senderId.name}</span>
+            <span className="message-sender">{sender.name}</span>
             <span className="message-time">{getRelativeTime(message.createdAt)}</span>
           </div>
         )}

@@ -6,7 +6,7 @@ import { initSocket, disconnectSocket } from '../socket/socket';
 const SocketContext = createContext();
 
 export const SocketProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { activeWorkspace } = useWorkspace();
   const [socket, setSocket] = useState(null);
   
@@ -16,7 +16,6 @@ export const SocketProvider = ({ children }) => {
 
   // Connect/disconnect socket based on auth state
   useEffect(() => {
-    const token = localStorage.getItem('taskflow_token');
     if (user && token) {
       const s = initSocket(token);
       setSocket(s);
@@ -31,23 +30,38 @@ export const SocketProvider = ({ children }) => {
       setOnlineUsers([]);
       setUserStatuses({});
     }
-  }, [user]);
+  }, [user, token]);
 
-  // Join workspace room when workspace changes
+  // Join workspace room when workspace changes or socket connects
   useEffect(() => {
-    if (socket && activeWorkspace) {
-      // Leave old workspace room on the client side
-      if (prevWorkspaceIdRef.current && prevWorkspaceIdRef.current !== activeWorkspace._id) {
-        // Reset online user state for the new workspace
-        setOnlineUsers([]);
-        setUserStatuses({});
+    if (!socket || !activeWorkspace?._id) return;
+
+    const handleConnect = () => {
+      if (activeWorkspace?._id) {
+        socket.emit('join_workspace', { 
+          workspaceId: activeWorkspace._id 
+        });
       }
-      
-      prevWorkspaceIdRef.current = activeWorkspace._id;
-      socket.emit('join_workspace', { 
-        workspaceId: activeWorkspace._id 
-      });
+    };
+
+    if (socket.connected) {
+      handleConnect();
     }
+
+    socket.on('connect', handleConnect);
+
+    // Leave old workspace room on the client side
+    if (prevWorkspaceIdRef.current && prevWorkspaceIdRef.current !== activeWorkspace._id) {
+      // Reset online user state for the new workspace
+      setOnlineUsers([]);
+      setUserStatuses({});
+    }
+    
+    prevWorkspaceIdRef.current = activeWorkspace._id;
+
+    return () => {
+      socket.off('connect', handleConnect);
+    };
   }, [socket, activeWorkspace]);
 
   // Listen for online/offline events

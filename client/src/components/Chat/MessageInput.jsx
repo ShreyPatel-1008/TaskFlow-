@@ -41,7 +41,7 @@ const MessageInput = ({ channel }) => {
   useEffect(() => {
     setText('');
     setMentionQuery(null);
-  }, [channel._id]);
+  }, [channel?._id]);
 
   // Clean up typing timeout on unmount
   useEffect(() => {
@@ -50,11 +50,11 @@ const MessageInput = ({ channel }) => {
         clearTimeout(typingTimeoutRef.current);
       }
       // Emit typing_stop on unmount
-      if (socket && channel) {
+      if (socket && channel?._id) {
         socket.emit('typing_stop', { channelId: channel._id });
       }
     };
-  }, [socket, channel._id]);
+  }, [socket, channel?._id]);
 
   // Close autocomplete on outside click
   useEffect(() => {
@@ -78,6 +78,10 @@ const MessageInput = ({ channel }) => {
       alert('Cannot send message: Not connected to real-time server (socket is null)');
       return;
     }
+    if (!channel?._id) {
+      console.error('No active channel');
+      return;
+    }
     
     console.log('Emitting send_message to socket...');
     socket.emit('send_message', {
@@ -92,7 +96,7 @@ const MessageInput = ({ channel }) => {
   };
 
   const handleTyping = (value) => {
-    if (!socket) return;
+    if (!socket || !channel?._id) return;
     
     if (value.trim()) {
       socket.emit('typing_start', { channelId: channel._id });

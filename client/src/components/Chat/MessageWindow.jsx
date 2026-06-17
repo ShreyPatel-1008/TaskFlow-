@@ -91,10 +91,10 @@ const MessageWindow = ({ channel }) => {
   useEffect(() => {
     if (!socket) return;
 
-    const handleNewMessage = (msg) => {
+    function handleNewMessage(msg) {
       // Ensure channelId comparison works whether string or object
-      const msgChannelId = typeof msg.channelId === 'object' ? msg.channelId._id : msg.channelId;
-      if (msgChannelId === channel._id || msgChannelId?.toString() === channel._id?.toString()) {
+      const msgChannelId = (typeof msg.channelId === 'object' && msg.channelId !== null) ? (msg.channelId._id || msg.channelId) : msg.channelId;
+      if (msgChannelId?.toString() === channel._id?.toString()) {
         setMessages(prev => {
           // Prevent duplicates
           if (prev.some(m => m._id === msg._id)) return prev;
@@ -108,39 +108,39 @@ const MessageWindow = ({ channel }) => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
       }
-    };
+    }
 
-    const handleMessageEdited = ({ messageId, text, editedAt }) => {
+    function handleMessageEdited({ messageId, text, editedAt }) {
       setMessages(prev => prev.map(m => 
         m._id === messageId ? { ...m, text, isEdited: true, editedAt } : m
       ));
-    };
+    }
 
-    const handleMessageDeleted = ({ messageId }) => {
+    function handleMessageDeleted({ messageId }) {
       setMessages(prev => prev.map(m => 
         m._id === messageId ? { ...m, isDeleted: true, text: 'This message was deleted' } : m
       ));
-    };
+    }
 
-    const handleTyping = ({ userId, name, channelId: typingChannelId }) => {
-      if (typingChannelId === channel._id && userId !== user._id) {
+    function handleTyping({ userId, name, channelId: typingChannelId }) {
+      if (typingChannelId?.toString() === channel._id?.toString() && userId !== user._id) {
         setTypingUsers(prev => {
           const next = new Map(prev);
           next.set(userId, name);
           return next;
         });
       }
-    };
+    }
 
-    const handleStopTyping = ({ userId, channelId: typingChannelId }) => {
-      if (typingChannelId === channel._id) {
+    function handleStopTyping({ userId, channelId: typingChannelId }) {
+      if (typingChannelId?.toString() === channel._id?.toString()) {
         setTypingUsers(prev => {
           const next = new Map(prev);
           next.delete(userId);
           return next;
         });
       }
-    };
+    }
 
     socket.on('new_message', handleNewMessage);
     socket.on('message_edited', handleMessageEdited);

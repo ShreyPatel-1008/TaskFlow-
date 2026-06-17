@@ -10,11 +10,14 @@ export const AuthProvider = ({ children }) => {
         const saved = localStorage.getItem('taskflow_user');
         return saved ? JSON.parse(saved) : null;
     });
+    const [token, setToken] = useState(() => {
+        return localStorage.getItem('taskflow_token');
+    });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('taskflow_token');
-        if (token) {
+        const initialToken = localStorage.getItem('taskflow_token');
+        if (initialToken) {
             API.get('/auth/me')
                 .then(res => {
                     // Server confirmed the token — update cached user
@@ -28,6 +31,7 @@ export const AuthProvider = ({ children }) => {
                         localStorage.removeItem('taskflow_token');
                         localStorage.removeItem('taskflow_user');
                         setUser(null);
+                        setToken(null);
                     } else {
                         // Network error, timeout, or server cold-starting (5xx, no response).
                         // Keep the cached user so the user stays on their dashboard.
@@ -51,6 +55,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('taskflow_token', res.data.token);
         localStorage.setItem('taskflow_user', JSON.stringify(res.data.user));
         setUser(res.data.user);
+        setToken(res.data.token);
         return res.data;
     }, []);
 
@@ -59,14 +64,16 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('taskflow_token', res.data.token);
         localStorage.setItem('taskflow_user', JSON.stringify(res.data.user));
         setUser(res.data.user);
+        setToken(res.data.token);
         return res.data;
     }, []);
 
-    const googleLogin = useCallback(async (token) => {
-        const res = await API.post('/auth/google', { token });
+    const googleLogin = useCallback(async (t) => {
+        const res = await API.post('/auth/google', { token: t });
         localStorage.setItem('taskflow_token', res.data.token);
         localStorage.setItem('taskflow_user', JSON.stringify(res.data.user));
         setUser(res.data.user);
+        setToken(res.data.token);
         return res.data;
     }, []);
 
@@ -74,10 +81,11 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('taskflow_token');
         localStorage.removeItem('taskflow_user');
         setUser(null);
+        setToken(null);
     }, []);
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, googleLogin, logout, isAuthenticated: !!user }}>
+        <AuthContext.Provider value={{ user, token, loading, login, register, googleLogin, logout, isAuthenticated: !!user }}>
             {children}
         </AuthContext.Provider>
     );
